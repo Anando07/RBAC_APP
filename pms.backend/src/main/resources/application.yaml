@@ -1,0 +1,72 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: pms.backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/pms_app_db?useSSL=false&serverTimezone=Asia/Dhaka&allowPublicKeyRetrieval=true
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - email
+              - profile
+
+          github:
+            client-id: ${GITHUB_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET}
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - user:email
+              - read:user
+
+security:
+  jwt:
+    secret: ${JWT_SECRET}
+    issuer: pms-backend
+    access-ttl-seconds: 3600
+    refresh-ttl-seconds: 604800
+    refresh-cookie-name: refreshToken
+    cookie-http-only: true
+    cookie-secure: false
+    cookie-same-site: Lax
+    cookie-domain: ""
+
+app:
+  cors:
+    front-end-url: http://localhost:5173
+
+  auth:
+    frontend:
+      success-redirect: http://localhost:5173/oauth2/redirect
+      failure-redirect: http://localhost:5173/login?error=true
+
+  # =========================================================
+  # SWAGGER / OPENAPI
+  # =========================================================
+
+  springdoc:
+    api-docs:
+      path: /v3/api-docs
+      version: openapi_3_0

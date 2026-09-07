@@ -1,0 +1,61 @@
+spring:
+  application:
+    name: pms.backend
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/pms_app_db?useSSL=false&serverTimezone=Asia/Dhaka&allowPublicKeyRetrieval=true
+    username: root
+    password:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+
+  # OAuth2 Client Configurations
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: "YOUR_GOOGLE_CLIENT_ID"
+            client-secret: "YOUR_GOOGLE_CLIENT_SECRET"
+            scope:
+              - email
+              - profile
+          github:
+            client-id: "YOUR_GITHUB_CLIENT_ID"
+            client-secret: "YOUR_GITHUB_CLIENT_SECRET"
+            scope:
+              - user:email
+              - read:user
+
+server:
+  port: 8082
+
+# JWT and Cookie Configurations
+security:
+  jwt:
+    secret: "your-super-secret-key-that-must-be-at-least-64-bytes-long-for-hs512-algorithm-protection!"
+    access-ttl-seconds: 3600
+    refresh-ttl-seconds: 604800
+    issuer: "pms-backend"
+    refresh-token-cookie-name: "refreshToken"
+    cookie-http-only: true
+    cookie-secure: false
+    cookie-same-site: "Lax"
+    cookie-domain: ""
+
+# App Custom Properties
+app:
+  cors:
+    front-end-url: "http://localhost:3000" # <--- ADD THIS LINE
+  auth:
+    frontend:
+      success-redirect: "http://localhost:3000/oauth2/redirect"
+      failure-redirect: "http://localhost:3000/login?error=true"
