@@ -121,7 +121,7 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.front-end-url:http://localhost:3000}") String corsUrls) {
+            @Value("${app.cors.front-end-url:http://localhost:5173}") String corsUrls) {
 
         String[] urls = corsUrls.trim().split("\\s*,\\s*");
 
