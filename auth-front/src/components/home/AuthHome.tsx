@@ -116,7 +116,7 @@ export default function AuthHome() {
             {t.features?.title || "All Features"}
           </h2>
           <p className="text-muted-foreground mt-4 text-lg">
-            Everything you need to secure your users, roles, and administrative routes.
+            {t.features?.subtitle || "Everything you need to secure your users, roles, and administrative routes."}
           </p>
         </div>
 

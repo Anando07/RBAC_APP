@@ -23,6 +23,7 @@ export const translations = {
     },
     features: {
       title: "Key Features",
+      subtitle:"Everything you need to secure your users, roles, and administrative routes.",
       list: [
         { title: "Biometric Auth", desc: "Passkey and WebAuthn integration." },
         { title: "Encryption", desc: "End-to-end zero-knowledge security." },
@@ -68,6 +69,7 @@ export const translations = {
     },
     features: {
       title: "মূল বৈশিষ্ট্যসমূহ",
+      subtitle:"আপনার ব্যবহারকারী, রোল এবং প্রশাসনিক রুটগুলোকে সুরক্ষিত করার জন্য প্রয়োজনীয় সবকিছু।",
       list: [
         { title: "বায়োমেট্রিক অথ", desc: "পাসকি এবং ওয়েব-অথেন সমর্থন।" },
         { title: "এন্ক্রিপশন", desc: "সম্পূর্ণ নিরাপদ এন্ড-টু-এন্ড সিকিউরিটি।" },

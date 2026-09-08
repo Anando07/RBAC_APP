@@ -3,6 +3,7 @@ import apiClient from "@/config/apiClient";
 import type LoginData from "@/models/LoginData";
 import type LoginResponseData from "@/models/LoginResponseData";
 import type User from "@/models/User";
+
 //register function
 export const registerUser = async (signupData: RegisterData) => {
   // api  call to server to save data
@@ -32,7 +33,6 @@ export const getCurrentUser = async (emailId: string | undefined) => {
 };
 
 //refresh token
-
 export const refreshToken = async () => {
   const response = await apiClient.post<LoginResponseData>(`/auth/refresh`);
   return response.data;

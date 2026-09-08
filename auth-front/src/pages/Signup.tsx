@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Mail, Lock, User, Github, Chrome } from "lucide-react";
-import React, { useState, type FormEvent } from "react";
+import { Mail, Lock, User } from "lucide-react";
+import React, { useState } from "react";
 import toast from "react-hot-toast";
 import type RegisterData from "@/models/RegisterData";
 import { registerUser } from "@/services/AuthService";
@@ -19,15 +19,12 @@ function Signup() {
   });
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
-  // text input, email, password, number , textarea
   // handling form change
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // console.log(event.target.name);
-    // console.log(event.target.value);
     setData((value) => ({
       ...value,
       [event.target.name]: event.target.value,
@@ -37,39 +34,44 @@ function Signup() {
   // handling form submit
   const handleFormSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    console.log(data);
+    setLoading(true);
+    setError(null);
 
-    //validations
+    // validations
     if (data.name.trim() === "") {
       toast.error("Name is required !");
+      setLoading(false);
       return;
     }
 
     if (data.email.trim() === "") {
       toast.error("Email is required !");
+      setLoading(false);
       return;
     }
 
     if (data.password.trim() === "") {
       toast.error("Password is required !");
+      setLoading(false);
       return;
     }
 
-    //form submit for registrations
+    // form submit for registrations
     try {
-      const result = await registerUser(data);
-      console.log(result);
-      toast.success("User register successfully...");
+      await registerUser(data);
+      toast.success("User registered successfully...");
       setData({
         name: "",
         email: "",
         password: "",
       });
-      //navigate : login
       navigate("/login");
-    } catch (error) {
-      console.log(error);
+    } catch (err: any) {
+      console.error(err);
+      setError("Error in registering the user...");
       toast.error("Error in registering the user...");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -155,7 +157,9 @@ function Signup() {
                 </div>
               </div>
 
-              <Button className="w-full rounded-2xl text-lg">Sign Up</Button>
+              <Button disabled={loading} className="w-full rounded-2xl text-lg">
+                {loading ? "Signing Up..." : "Sign Up"}
+              </Button>
 
               {/* Divider */}
               <div className="flex items-center gap-4 my-4">

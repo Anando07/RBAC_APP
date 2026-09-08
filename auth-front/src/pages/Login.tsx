@@ -3,16 +3,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Mail, Lock, Github, Chrome, CheckCircle2Icon } from "lucide-react";
+import { Mail, Lock, CheckCircle2Icon } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import type LoginData from "@/models/LoginData";
 import toast from "react-hot-toast";
-import { loginUser } from "@/services/AuthService";
 import { useNavigate } from "react-router";
 import { Alert, AlertTitle } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import useAuth from "@/auth/store";
 import OAuth2Buttons from "@/components/OAuth2Buttons";
+
 function Login() {
   const [loginData, setLoginData] = useState<LoginData>({
     email: "",
@@ -34,8 +34,9 @@ function Login() {
 
   const handleFormSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    setError(null);
 
-    //validation:
+    // validation
     if (loginData.email.trim() === "") {
       toast.error("Input required !");
       return;
@@ -45,31 +46,15 @@ function Login() {
       return;
     }
 
-    //server call for login
-    // console.log(event.target);
-    // console.log(loginData);
-
     try {
       setLoading(true);
-      // const userInfo = await loginUser(loginData);
-
-      //login function : useAuth
       await login(loginData);
       toast.success("Login success");
-      // console.log(userInfo);
       navigate("/dashboard");
-
-      //save the current user logged in informations
-      //localstorage
-    } catch (error: any) {
-      console.log(error);
-
+    } catch (err: any) {
+      console.error(err);
       toast.error("Error !!");
-      if (error?.status == 400) {
-        setError(error);
-      } else {
-        setError(error);
-      }
+      setError(err);
     } finally {
       setLoading(false);
     }
@@ -92,7 +77,7 @@ function Login() {
               transition={{ delay: 0.2 }}
               className="text-4xl font-bold text-center"
             >
-              Welcome Back
+              Welcome Again
             </motion.h1>
 
             <motion.p
@@ -101,10 +86,10 @@ function Login() {
               transition={{ delay: 0.4 }}
               className="text-center text-muted-foreground mt-2"
             >
-              Login to access your authentication app
+              Login to access with RBAC AUTH this APP
             </motion.p>
 
-            {/* error section */}
+            {/* Error section */}
             {error && (
               <div className="mt-6">
                 <Alert variant={"destructive"}>
@@ -128,7 +113,7 @@ function Login() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="you@example.com"
+                    placeholder="email@example.com"
                     className="pl-10"
                     name="email"
                     value={loginData.email}
