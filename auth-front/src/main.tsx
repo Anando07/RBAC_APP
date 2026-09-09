@@ -15,6 +15,7 @@ import OAuthSuccess from "./pages/OAuthSuccess.tsx";
 import Gallery from "./pages/Gallery.tsx";
 import Notice from "./pages/Notice.tsx";
 import Contact from "./pages/Contact.tsx";
+import UserManagement from "./pages/users/UserManagement.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <BrowserRouter>
@@ -31,6 +32,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/dashboard" element={<Userlayout />}>
           <Route index element={<Userhome />} />
           <Route path="profile" element={<Userprofile />} />
+          <Route path="users" element={<UserManagement />} />
           {/* .... */}
         </Route>
         <Route path="/oauth/success" element={<OAuthSuccess />} />
