@@ -1,17 +1,19 @@
+import axios from "axios";
 import type RegisterData from "@/models/RegisterData";
 import apiClient from "@/config/apiClient";
 import type LoginData from "@/models/LoginData";
 import type LoginResponseData from "@/models/LoginResponseData";
 import type User from "@/models/User";
 
-//register function
+const BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL || "http://localhost:8082/api/v1";
+
+// register function
 export const registerUser = async (signupData: RegisterData) => {
-  // api  call to server to save data
   const response = await apiClient.post(`/auth/register`, signupData);
   return response.data;
 };
 
-//login
+// login
 export const loginUser = async (loginData: LoginData) => {
   const response = await apiClient.post<LoginResponseData>(
     "/auth/login",
@@ -25,16 +27,18 @@ export const logoutUser = async () => {
   return response.data;
 };
 
-//get current login user
+// get current login user
 export const getCurrentUser = async (emailId: string | undefined) => {
   const response = await apiClient.get<User>(`/users/email/${emailId}`);
   return response.data;
 };
 
-//refresh token
+// refresh token - Use raw axios directly to avoid interceptor loops
 export const refreshToken = async () => {
-  const response = await apiClient.post<LoginResponseData>(`/auth/refresh`);
+  const response = await axios.post<LoginResponseData>(
+    `${BASE_URL}/auth/refresh`,
+    {},
+    { withCredentials: true } // Ensures cookie with refresh token is sent to backend
+  );
   return response.data;
 };
-
-//apis

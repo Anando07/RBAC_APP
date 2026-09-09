@@ -33,7 +33,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="profile" element={<Userprofile />} />
           {/* .... */}
         </Route>
-        <Route path="/oauth2/success" element={<OAuthSuccess />} />
+        <Route path="/oauth/success" element={<OAuthSuccess />} />
         <Route path="/oauth/failure" element={<OAuthSuccess />} />
       </Route>
     </Routes>
