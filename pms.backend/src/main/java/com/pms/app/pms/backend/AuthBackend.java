@@ -173,7 +173,7 @@ public class AuthBackend {
                 );
 
                 System.out.println(
-                        "Password : Akb@2007"
+                        "Password : Ab@2007"
                 );
 
                 System.out.println(
