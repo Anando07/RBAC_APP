@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
-import { Navigate } from "react-router";
+import { Navigate, useOutletContext } from "react-router";
+import * as XLSX from "xlsx";
+import { jsPDF } from "jspdf";
 import useAuth from "@/auth/store";
 import type User from "@/models/User";
 import type Role from "@/models/Role";
@@ -30,8 +32,12 @@ import {
   Upload,
   Eye,
   EyeOff,
+  FileSpreadsheet,
+  FileText,
+  RotateCcw,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import type { OutletContextType } from "@/pages/RootLayout";
 import {
   getAllUsers,
   createUser,
@@ -75,7 +81,91 @@ const getErrorMessage = (error: unknown, fallback: string) => {
   return fallback;
 };
 
+const exportRows = (users: User[]) =>
+  users.map((user) => ({
+    Name: user.name || "",
+    Email: user.email || "",
+    Role: user.roles?.map((role) => role.name).join(", ") || "GUEST",
+    Provider: user.provider || "",
+    Status: (user.enabled ?? user.enable ?? true) ? "Active" : "Inactive",
+  }));
+
+const SOFTWARE_NAME = "RBAC Auth";
+
+const toBase64 = (bytes: ArrayBuffer) => {
+  const binary = Array.from(new Uint8Array(bytes), (byte) => String.fromCharCode(byte)).join("");
+  return window.btoa(binary);
+};
+
+const createPdf = async (
+  users: User[],
+  language: "en" | "bn",
+  filterSummary: string,
+  loadFont = true
+) => {
+  const pdf = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  let usesCustomFont = false;
+
+  if (loadFont) {
+    try {
+      const fontName = language === "en" ? "TimesNewRoman" : "Nikosh";
+      const fontPath = language === "en" ? "/fonts/TimesNewRoman.ttf" : "/fonts/Nikosh.ttf";
+      const response = await fetch(fontPath);
+      if (!response.ok) throw new Error(`${fontName} font not found`);
+      pdf.addFileToVFS(`${fontName}.ttf`, toBase64(await response.arrayBuffer()));
+      pdf.addFont(`${fontName}.ttf`, fontName, "normal");
+      pdf.setFont(fontName, "normal");
+      usesCustomFont = true;
+    } catch {
+      pdf.setFont("helvetica", "normal");
+    }
+  } else {
+    pdf.setFont("helvetica", "normal");
+  }
+
+  pdf.setFontSize(18);
+  pdf.text(`${SOFTWARE_NAME} - User Directory`, 14, 16);
+  pdf.setFontSize(9);
+  pdf.text(`Exported: ${new Date().toLocaleString()}`, 14, 23);
+  pdf.text(`Filters: ${filterSummary}`, 14, 28);
+
+  const headers = ["Name", "Email", "Role", "Provider", "Status"];
+  const widths = [55, 82, 55, 45, 30];
+  const startX = 14;
+  let y = 37;
+
+  pdf.setFillColor(37, 99, 235);
+  pdf.setTextColor(255, 255, 255);
+  let x = startX;
+  headers.forEach((header, index) => {
+    pdf.rect(x, y - 6, widths[index], 8, "F");
+    pdf.text(header, x + 2, y - 1);
+    x += widths[index];
+  });
+
+  pdf.setTextColor(30, 41, 59);
+  y += 8;
+  exportRows(users).forEach((row) => {
+    if (y > 190) {
+      pdf.addPage();
+      y = 18;
+    }
+    x = startX;
+    const values = [row.Name, row.Email, row.Role, row.Provider, row.Status];
+    values.forEach((value, index) => {
+      pdf.setDrawColor(226, 232, 240);
+      pdf.rect(x, y - 6, widths[index], 10);
+      pdf.text(pdf.splitTextToSize(value, widths[index] - 4), x + 2, y);
+      x += widths[index];
+    });
+    y += 10;
+  });
+
+  return { pdf, usesCustomFont };
+};
+
 function UserManagementContent() {
+  const { lang } = useOutletContext<OutletContextType>();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -83,6 +173,8 @@ function UserManagementContent() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -282,13 +374,26 @@ function UserManagementContent() {
   };
 
   const filteredUsers = useMemo(() => {
+    const normalizedSearch = search.toLowerCase().trim();
     return users.filter(
-      (u) =>
-        u.name?.toLowerCase().includes(search.toLowerCase()) ||
-        u.email?.toLowerCase().includes(search.toLowerCase()) ||
-        u.provider?.toLowerCase().includes(search.toLowerCase())
+      (u) => {
+        const matchesSearch =
+          !normalizedSearch ||
+          u.name?.toLowerCase().includes(normalizedSearch) ||
+          u.email?.toLowerCase().includes(normalizedSearch) ||
+          u.provider?.toLowerCase().includes(normalizedSearch);
+        const matchesRole =
+          roleFilter === "all" ||
+          u.roles?.some((role) => String(role.id) === roleFilter);
+        const isEnabled = u.enabled ?? u.enable ?? true;
+        const matchesStatus =
+          statusFilter === "all" ||
+          (statusFilter === "active" ? isEnabled : !isEnabled);
+
+        return Boolean(matchesSearch && matchesRole && matchesStatus);
+      }
     );
-  }, [users, search]);
+  }, [users, search, roleFilter, statusFilter]);
 
   const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE) || 1;
 
@@ -301,6 +406,68 @@ function UserManagementContent() {
     return filteredUsers.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredUsers, currentPage]);
 
+  const selectedRoleName = roles.find((role) => String(role.id) === roleFilter)?.name;
+  const filterSummary = [
+    search.trim() ? `Search: ${search.trim()}` : "Search: All",
+    selectedRoleName ? `Role: ${selectedRoleName.replace(/^ROLE_/, "")}` : "Role: All",
+    `Status: ${statusFilter === "all" ? "All" : statusFilter}`,
+  ].join(" | ");
+
+  const resetFilters = () => {
+    setSearch("");
+    setRoleFilter("all");
+    setStatusFilter("all");
+    setCurrentPage(1);
+  };
+
+  const handleExportExcel = () => {
+    const rows = exportRows(filteredUsers);
+    const headers = Object.keys(rows[0] || {
+      Name: "",
+      Email: "",
+      Role: "",
+      Provider: "",
+      Status: "",
+    });
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      [`${SOFTWARE_NAME} - User Directory`],
+      [`Exported: ${new Date().toLocaleString()}`],
+      [`Filters: ${filterSummary}`],
+      [],
+      headers,
+      ...rows.map((row) => Object.values(row)),
+    ]);
+    worksheet["!cols"] = [
+      { wch: 24 },
+      { wch: 34 },
+      { wch: 24 },
+      { wch: 16 },
+      { wch: 14 },
+    ];
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Users");
+    XLSX.writeFile(workbook, `users-${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Excel file downloaded");
+  };
+
+  const handleExportPdf = async () => {
+    try {
+      const { pdf, usesCustomFont } = await createPdf(filteredUsers, lang, filterSummary);
+      pdf.save(`users-${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.success(usesCustomFont ? "PDF downloaded with custom font" : "PDF downloaded with standard font");
+    } catch (error) {
+      console.error("Custom-font PDF export failed, retrying with fallback font", error);
+      try {
+        const { pdf } = await createPdf(filteredUsers, lang, filterSummary, false);
+        pdf.save(`users-${new Date().toISOString().slice(0, 10)}.pdf`);
+        toast.success("PDF downloaded with the standard font");
+      } catch (fallbackError) {
+        console.error("PDF export failed", fallbackError);
+        toast.error("Unable to create PDF file");
+      }
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-7xl mx-auto p-4">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -310,9 +477,17 @@ function UserManagementContent() {
             Manage system users, dynamic roles, and account access states.
           </p>
         </div>
-        <Button onClick={() => handleOpenForm()} className="gap-2 rounded-xl">
-          <Plus className="w-4 h-4" /> Add New User
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={handleExportExcel} variant="outline" className="gap-2 rounded-xl">
+            <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> Excel
+          </Button>
+          <Button onClick={() => void handleExportPdf()} variant="outline" className="gap-2 rounded-xl">
+            <FileText className="h-4 w-4 text-rose-600" /> PDF
+          </Button>
+          <Button onClick={() => handleOpenForm()} className="gap-2 rounded-xl">
+            <Plus className="w-4 h-4" /> Add New User
+          </Button>
+        </div>
       </div>
 
       {isFormOpen && (
@@ -559,17 +734,59 @@ function UserManagementContent() {
 
       <Card className="rounded-2xl border-border shadow-sm">
         <CardHeader className="pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="relative w-full sm:w-80">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-            <Input
-              placeholder="Filter by name, email or provider..."
-              value={search}
+          <div className="flex w-full flex-col gap-2 md:flex-row">
+            <div className="relative w-full md:w-80">
+              <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+              <Input
+                placeholder="Filter by name, email or provider..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-9 rounded-xl"
+              />
+            </div>
+            <select
+              value={roleFilter}
               onChange={(e) => {
-                setSearch(e.target.value);
+                setRoleFilter(e.target.value);
                 setCurrentPage(1);
               }}
-              className="pl-9 rounded-xl"
-            />
+              className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
+              aria-label="Filter by role"
+            >
+              <option value="all">All roles</option>
+              {roles.map((role) => (
+                <option key={String(role.id)} value={String(role.id)}>
+                  {(role.name || "ROLE_USER").replace(/^ROLE_/, "")}
+                </option>
+              ))}
+            </select>
+            <select
+              value={statusFilter}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="h-10 rounded-xl border border-input bg-background px-3 text-sm"
+              aria-label="Filter by status"
+            >
+              <option value="all">All status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={resetFilters}
+              disabled={!search && roleFilter === "all" && statusFilter === "all"}
+              className="h-10 shrink-0 gap-2 rounded-xl"
+              title="Reset filters"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset
+            </Button>
           </div>
           <p className="text-xs text-muted-foreground">
             Showing {paginatedUsers.length} of {filteredUsers.length} records
