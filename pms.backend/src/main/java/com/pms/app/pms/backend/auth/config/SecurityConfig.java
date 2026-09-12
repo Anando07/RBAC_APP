@@ -5,6 +5,7 @@ import com.pms.app.pms.backend.dtos.ApiError;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
@@ -49,6 +50,7 @@ public class SecurityConfig {
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize ->
                         authorize
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 .requestMatchers(AppConstants.AUTH_PUBLIC_URLS).permitAll()
                                 .requestMatchers(AppConstants.AUTH_USER_MANAGEMENT_URLS)
                                 .hasAnyRole(
@@ -129,6 +131,7 @@ public class SecurityConfig {
         config.setAllowedOrigins(Arrays.asList(urls));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH", "HEAD"));
         config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(List.of("Authorization", "X-Refresh-Token"));
         config.setAllowCredentials(true);
 
         var source = new UrlBasedCorsConfigurationSource();

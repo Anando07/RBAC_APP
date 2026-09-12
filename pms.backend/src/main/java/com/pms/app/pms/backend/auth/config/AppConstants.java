@@ -4,13 +4,15 @@ public class AppConstants {
 
     public static final String[] AUTH_PUBLIC_URLS = {
             "/api/v1/auth/**",
+            "/api/v1/files/images/**",
             "/v3/api-docs/**",
             "/swagger-ui.html",
             "/swagger-ui/**"
     };
 
     public static final String[] AUTH_USER_MANAGEMENT_URLS = {
-            "/api/v1/users/**"
+            "/api/v1/users/**",
+            "/api/v1/roles/**"
     };
 
     public static final String[] AUTH_GUEST_URLS = {

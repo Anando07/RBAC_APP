@@ -1,10 +1,14 @@
+import type Role from "./Role";
+
 export default interface User {
   id: string;
+  name: string;
   email: string;
-  name?: string;
-  enabled: boolean;
   image?: string;
-  updatedAt?: string;
+  enable?: boolean;   // Backend JSON property
+  enabled?: boolean;  // Frontend standardized property
+  provider?: string;
   createdAt?: string;
-  provider: string;
+  updatedAt?: string;
+  roles?: Role[];
 }

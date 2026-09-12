@@ -131,6 +131,10 @@ public class UserServiceImpl implements UserService {
                     !roleDto.getName().isBlank()) {
 
                 roleName = roleDto.getName();
+                // Normalize: ensure role names stored/queried include ROLE_ prefix
+                if (!roleName.startsWith("ROLE_")) {
+                    roleName = "ROLE_" + roleName;
+                }
             }
         }
 

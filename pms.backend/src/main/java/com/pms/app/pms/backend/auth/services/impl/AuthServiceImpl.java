@@ -5,7 +5,6 @@ import com.pms.app.pms.backend.auth.payload.UserDto;
 import com.pms.app.pms.backend.auth.services.AuthService;
 import com.pms.app.pms.backend.auth.services.UserService;
 import lombok.AllArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,7 +12,6 @@ import org.springframework.stereotype.Service;
 public class AuthServiceImpl implements AuthService {
 
     private final UserService userService;
-    private  final PasswordEncoder passwordEncoder;
 
 
     @Override
@@ -29,9 +27,8 @@ public class AuthServiceImpl implements AuthService {
         userDto.setName(request.getName());
         userDto.setEmail(request.getEmail());
 
-        userDto.setPassword(
-                passwordEncoder.encode(request.getPassword())
-        );
+        // Pass raw password to UserService so it can be encoded consistently in one place
+        userDto.setPassword(request.getPassword());
 
         return userService.createUser(userDto);
     }

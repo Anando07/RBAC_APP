@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Mail, Lock, CheckCircle2Icon } from "lucide-react";
+import { Mail, Lock, CheckCircle2Icon, Eye, EyeOff } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import type LoginData from "@/models/LoginData";
 import toast from "react-hot-toast";
@@ -21,6 +21,7 @@ function Login() {
 
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<any>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
   const login = useAuth((state) => state.login);
@@ -129,13 +130,22 @@ function Login() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     name="password"
                     value={loginData.password}
                     onChange={handleInputChange}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 

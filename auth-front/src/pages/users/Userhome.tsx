@@ -1,7 +1,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
-import { BarChart3, User, ShieldCheck, Activity } from "lucide-react";
+import { BarChart3, User, ShieldCheck, Activity, ArrowUpRight } from "lucide-react";
 import { getCurrentUser } from "@/services/AuthService";
 import useAuth from "@/auth/store";
 import { useState } from "react";
@@ -25,19 +25,22 @@ function Userhome() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6">
+    <div className="min-h-full bg-background text-foreground p-1 md:p-3">
       {/* Page Title */}
       <motion.h1
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="text-4xl font-bold mb-8"
+        className="mb-2 text-3xl font-bold tracking-tight md:text-4xl"
       >
-        Dashboard Overview
+        Good to see you, {user?.name?.split(" ")[0] || "there"}.
       </motion.h1>
+      <p className="mb-8 max-w-2xl text-muted-foreground">
+        Your secure workspace is ready. Review your account activity and keep your access up to date.
+      </p>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      <div className="mb-10 grid grid-cols-1 gap-4 md:grid-cols-3">
         {[
           {
             title: "Total Logins",
@@ -61,8 +64,8 @@ function Userhome() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: i * 0.1 }}
           >
-            <Card className="bg-card/70 backdrop-blur-lg border-border rounded-2xl shadow-lg">
-              <CardContent className="p-6 flex items-center gap-4">
+            <Card className="rounded-2xl border-border bg-card shadow-sm">
+              <CardContent className="flex items-center gap-4 p-5">
                 <div className="p-3 bg-muted rounded-xl">{stat.icon}</div>
                 <div>
                   <p className="text-muted-foreground text-sm">{stat.title}</p>
@@ -80,28 +83,34 @@ function Userhome() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, delay: 0.2 }}
       >
-        <Card className="bg-card/70 backdrop-blur-lg border-border rounded-2xl shadow-lg mb-10">
+        <Card className="mb-10 rounded-2xl border-border bg-card shadow-sm">
           <CardContent className="p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h2 className="flex items-center gap-2 text-xl font-semibold">
               <BarChart3 className="w-6 h-6 text-primary" /> Recent Activity
-            </h2>
-            <ul className="space-y-3 text-muted-foreground">
-              <li>• Logged in from Chrome (Windows)</li>
-              <li>• Password updated</li>
-              <li>• New device added to trusted list</li>
-              <li>• Logged out from Safari (iPhone)</li>
+              </h2>
+              <ArrowUpRight className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <ul className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
+              <li className="rounded-xl bg-muted/60 p-3">Logged in from Chrome on Windows</li>
+              <li className="rounded-xl bg-muted/60 p-3">Password security is enabled</li>
+              <li className="rounded-xl bg-muted/60 p-3">Trusted device list is current</li>
+              <li className="rounded-xl bg-muted/60 p-3">No unusual sign-in activity</li>
             </ul>
           </CardContent>
         </Card>
       </motion.div>
 
       {/* Dummy CTA */}
-      <div className="text-center">
-        <Button onClick={getUserData} className="rounded-2xl px-8 text-lg">
-          Get current user
+      <div className="flex flex-col items-start justify-between gap-4 rounded-2xl border border-primary/20 bg-primary/5 p-5 sm:flex-row sm:items-center">
+        <div>
+          <p className="font-semibold">Account verification</p>
+          <p className="text-sm text-muted-foreground">Confirm your secure profile connection.</p>
+        </div>
+        <Button onClick={getUserData} className="rounded-xl px-5">
+          Verify account
         </Button>
-
-        <p>{user1?.name}</p>
+        {user1?.name && <p className="text-sm text-muted-foreground">Verified: {user1.name}</p>}
       </div>
     </div>
   );

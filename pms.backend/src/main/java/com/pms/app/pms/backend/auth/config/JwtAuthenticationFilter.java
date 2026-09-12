@@ -3,7 +3,9 @@ package com.pms.app.pms.backend.auth.config;
 import com.pms.app.pms.backend.auth.helpers.UserHelper;
 import com.pms.app.pms.backend.auth.repositories.UserRepository;
 import com.pms.app.pms.backend.auth.services.impl.JwtService;
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.Jws;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,74 +32,62 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
-    private Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
+    private static final Logger logger = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
 
         String header = request.getHeader("Authorization");
-        logger.info("Authorization header : {}", header);
 
         if (header != null && header.startsWith("Bearer ")) {
-
-
-            //token extract and validate then authentication create and then security context ke ander set karunga.
-
             String token = header.substring(7);
-            //check for access token
 
             try {
-
                 if (!jwtService.isAccessToken(token)) {
-                    //message pass kar hai---
                     filterChain.doFilter(request, response);
                     return;
                 }
 
-
                 Jws<Claims> parse = jwtService.parse(token);
-
-
                 Claims payload = parse.getPayload();
-
 
                 String userId = payload.getSubject();
                 UUID userUuid = UserHelper.parseUUID(userId);
 
                 userRepository.findById(userUuid).ifPresent(user -> {
-
-                    //check for user enable or not
-
                     if (user.isEnable()) {
-                        // user mil chuka hai database se
-                        List<GrantedAuthority> authorities = user.getRoles() == null ? List.of() : user.getRoles().stream().map(role -> new SimpleGrantedAuthority(role.getName())).collect(Collectors.toList());
-                        UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
+                        List<GrantedAuthority> authorities = user.getRoles() == null
+                                ? List.of()
+                                : user.getRoles().stream()
+                                .map(role -> {
+                                    String roleName = role.getName();
+                                    // Standardize: Ensure role starts with ROLE_ for Spring Security
+                                    if (!roleName.startsWith("ROLE_")) {
+                                        roleName = "ROLE_" + roleName;
+                                    }
+                                    return new SimpleGrantedAuthority(roleName);
+                                })
+                                .collect(Collectors.toList());
+
+                        UsernamePasswordAuthenticationToken authentication =
+                                new UsernamePasswordAuthenticationToken(user.getEmail(), null, authorities);
                         authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                        //final line : to set the authentication to security context
-                        if (SecurityContextHolder.getContext().getAuthentication() == null)
+
+                        if (SecurityContextHolder.getContext().getAuthentication() == null) {
                             SecurityContextHolder.getContext().setAuthentication(authentication);
+                        }
                     }
-
-
                 });
-
 
             } catch (ExpiredJwtException e) {
                 request.setAttribute("error", "Token Expired");
-                // e.printStackTrace();
-
             } catch (Exception e) {
                 request.setAttribute("error", "Invalid Token");
-//                e.printStackTrace();
-
             }
-
-
         }
 
         filterChain.doFilter(request, response);
-
-
     }
 
     @Override

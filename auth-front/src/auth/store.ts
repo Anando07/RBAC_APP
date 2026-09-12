@@ -16,8 +16,8 @@ type AuthState = {
   authStatus: boolean;
   authLoading: boolean;
   login: (loginData: LoginData) => Promise<LoginResponseData>;
-  logout: (silent?: boolean) => void;
-  checkLogin: () => boolean | undefined;
+  logout: (silent?: boolean) => Promise<void>;
+  checkLogin: () => boolean;
 
   changeLocalLoginData: (
     accessToken: string,
@@ -65,14 +65,14 @@ const useAuth = create<AuthState>()(
       },
       logout: async (silent = false) => {
         try {
-          //   if (!silent) {
-          //     await logoutUser();
-          //   }
           set({
             authLoading: true,
           });
-          await logoutUser();
-        } catch (error) {
+          if (!silent) {
+            await logoutUser();
+          }
+        } catch {
+          set({ authLoading: false });
         } finally {
           set({
             authLoading: false,
@@ -87,8 +87,7 @@ const useAuth = create<AuthState>()(
         });
       },
       checkLogin: () => {
-        if (get().accessToken && get().authStatus) return true;
-        else false;
+        return Boolean(get().accessToken && get().authStatus);
       },
     }),
 

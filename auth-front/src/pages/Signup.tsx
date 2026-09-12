@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { motion } from "framer-motion";
-import { Mail, Lock, User } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import type RegisterData from "@/models/RegisterData";
@@ -16,10 +16,11 @@ function Signup() {
     name: "",
     email: "",
     password: "",
+    confirmPassword: "",
   });
 
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const navigate = useNavigate();
 
@@ -35,7 +36,6 @@ function Signup() {
   const handleFormSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
-    setError(null);
 
     // validations
     if (data.name.trim() === "") {
@@ -64,11 +64,10 @@ function Signup() {
         name: "",
         email: "",
         password: "",
+        confirmPassword: "",
       });
       navigate("/login");
-    } catch (err: any) {
-      console.error(err);
-      setError("Error in registering the user...");
+    } catch {
       toast.error("Error in registering the user...");
     } finally {
       setLoading(false);
@@ -147,13 +146,22 @@ function Signup() {
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••"
-                    className="pl-10"
+                    className="pl-10 pr-10"
                     name="password"
                     value={data.password}
                     onChange={handleInputChange}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
               </div>
 

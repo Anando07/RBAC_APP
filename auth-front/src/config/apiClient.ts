@@ -1,10 +1,13 @@
 import useAuth from "@/auth/store";
 import { refreshToken } from "@/services/AuthService";
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 import toast from "react-hot-toast";
 
 const apiClient = axios.create({
-  baseURL: import.meta.env.AUTH_API_BASE_URL || "http://localhost:8082/api/v1",
+  baseURL:
+    import.meta.env.VITE_AUTH_API_BASE_URL ||
+    import.meta.env.AUTH_API_BASE_URL ||
+    "http://localhost:8082/api/v1",
   headers: {
     "Content-Type": "application/json",
   },
@@ -12,68 +15,101 @@ const apiClient = axios.create({
   timeout: 10000,
 });
 
-//every request: before
+function getBackendErrorMessage(error: unknown): string | undefined {
+  if (!axios.isAxiosError(error)) {
+    return undefined;
+  }
+
+  const data = error.response?.data;
+  if (typeof data === "string" && data.trim()) {
+    return data;
+  }
+  if (data && typeof data === "object") {
+    const responseData = data as { message?: unknown; error?: unknown };
+    const message = responseData.message ?? responseData.error;
+    return typeof message === "string" && message.trim() ? message : undefined;
+  }
+  return undefined;
+}
+
+// Attach Authorization before sending request
 apiClient.interceptors.request.use((config) => {
   const accessToken = useAuth.getState().accessToken;
+
   if (accessToken) {
+    config.headers = config.headers ?? new AxiosHeaders();
     config.headers.Authorization = `Bearer ${accessToken}`;
+  }
+
+  // Important: for multipart file uploads, do not set Content-Type manually
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+    delete config.headers["content-type"];
   }
 
   return config;
 });
 
 let isRefreshing = false;
-let pending: any[] = [];
+let pendingQueue: Array<(token: string | null) => void> = [];
 
-function queueRequest(cb: any) {
-  pending.push(cb);
+function queueRequest(cb: (token: string | null) => void) {
+  pendingQueue.push(cb);
 }
 
-function resolveQueue(newToken: string) {
-  pending.forEach((cb) => cb(newToken));
-  pending = [];
+function resolveQueue(newToken: string | null) {
+  pendingQueue.forEach((cb) => cb(newToken));
+  pendingQueue = [];
 }
 
-// response interceptors
+// Response interceptor: handles 401 & token rotation
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const is401 = error.response.status === 401;
-    const original = error.config;
-    console.log(original);
-    console.log("original retry: ", original._retry);
-    if (!is401 || original._retry) {
-      //message:
+    const originalRequest = error.config;
 
-      if (error.response && error.response.data)
-        toast.error(error.response.data?.message || "An error occurred");
-      console.error("API Error:", error.response.data);
-      console.error("Full error:", error);
-
+    if (!error.response) {
+      toast.error("Network error. Please check backend server status.");
       return Promise.reject(error);
     }
 
-    original._retry = true;
-    //we will try to refresh the token:
+    const is401 = error.response.status === 401;
+    const isAuthRoute = originalRequest.url?.includes("/auth/");
+
+    if (!is401 || originalRequest._retry || isAuthRoute) {
+      if (!isAuthRoute) {
+        const message = getBackendErrorMessage(error);
+        if (message) {
+          toast.error(message);
+        }
+      }
+      return Promise.reject(error);
+    }
+
+    originalRequest._retry = true;
+
     if (isRefreshing) {
-      console.log("added to queue");
       return new Promise((resolve, reject) => {
-        queueRequest((newToken: string) => {
-          if (!newToken) return reject();
-          original.headers.Authorization = `Bearer ${newToken}`;
-          resolve(apiClient(original));
+        queueRequest((newToken: string | null) => {
+          if (!newToken) {
+            return reject(error);
+          }
+          originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          resolve(apiClient(originalRequest));
         });
       });
     }
 
-    //start refresh
     isRefreshing = true;
 
     try {
-      console.log("start refreshing...");
       const loginResponse = await refreshToken();
       const newToken = loginResponse.accessToken;
-      if (!newToken) throw new Error("no access token received");
+
+      if (!newToken) {
+        throw new Error("No access token provided in refresh payload.");
+      }
+
       useAuth
         .getState()
         .changeLocalLoginData(
@@ -81,14 +117,15 @@ apiClient.interceptors.response.use(
           loginResponse.user,
           true
         );
-      //
+
       resolveQueue(newToken);
-      original.headers.Authorization = `Bearer ${newToken}`;
-      return apiClient(original);
-    } catch (error) {
-      resolveQueue("null");
-      useAuth.getState().logout();
-      return Promise.reject(error);
+      originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      resolveQueue(null);
+      await useAuth.getState().logout(true);
+      toast.error("Session expired. Please log in again.");
+      return Promise.reject(refreshError);
     } finally {
       isRefreshing = false;
     }
